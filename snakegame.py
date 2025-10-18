@@ -21,6 +21,7 @@ DOWN = (0, 1)
 LEFT = (-1, 0)
 RIGHT = (1, 0)
 
+
 # --- Базовый класс для игровых объектов ---
 
 class GameObject:
@@ -31,6 +32,7 @@ class GameObject:
     def __init__(self, position: Tuple[int, int], body_color: Tuple[int, int]):
         """
         Инициализирует базовые атрибуты объекта.
+
         :param position: Начальная позиция объекта 
                          (координаты верхнего левого угла).
         :param body_color: Цвет объекта в формате RGB.
@@ -43,16 +45,19 @@ class GameObject:
                     color: Tuple[int, int]):
         """
         Вспомогательный статический метод для рисования одного квадрата.
-        Используется классами Apple и Snake для отрисовки своих сегментов.
+        Используется классами Apple и Snake для отрисовки сегментов.
         """
         rect = pygame.Rect(position, (GRID_SIZE, GRID_SIZE))
         pygame.draw.rect(surface, color, rect)
 
     def draw(self, surface: pygame.Surface):
-        """Абстрактный метод для отрисовки объекта на экране.
+        """
+        Абстрактный метод для отрисовки объекта на экране.
         Должен быть переопределен в дочерних классах.
-        В базовом классе не должно быть рисующих действий."""
+        В базовом классе не должно быть рисующих действий.
+        """
         pass
+
 
 # --- Класс Apple ---
 
@@ -92,6 +97,7 @@ class Apple(GameObject):
         """
         GameObject.draw_square(surface, self.position, self.body_color)
 
+
 # --- Класс Snake ---
 
 class Snake(GameObject):
@@ -102,13 +108,13 @@ class Snake(GameObject):
         """
         Инициализирует начальное состояние змейки.
         """
-        # Вызов super() с нулевыми координатами, так как позиция будет 
-        # установлена в _initial_state
+        # Вызов super() с нулевыми координатами
         super().__init__((0, 0), GREEN)
         self._initial_state()
 
     def _initial_state(self):
-        """Устанавливает змейку в начальное состояние (центр, длина 1, 
+        """
+        Устанавливает змейку в начальное состояние (центр, длина 1, 
         случайное направление). Устраняет дублирование кода между __init__
         и reset.
         """
@@ -175,7 +181,7 @@ class Snake(GameObject):
         # Вставляем новый элемент в начало списка positions
         self.positions.insert(0, new_head_position)
         
-        # Если змейка не выросла (длина списка больше заданной), удаляем хвост
+        # Если змейка не выросла, удаляем хвост
         if len(self.positions) > self.length:
             # last_tail_position используется для затирания следа
             self.last_tail_position = self.positions.pop()
@@ -205,8 +211,9 @@ class Snake(GameObject):
         head = self.get_head_position()
         # Проверяем, совпадает ли позиция головы с какой-либо позицией 
         # в остальной части тела (self.positions[1:])
-        # Учитываем, что короткая змея (длина 1) не может укусить себя
+        # Короткая змея (длина 1) не может укусить себя
         return self.length > 1 and head in self.positions[1:]
+
 
 # --- Функции обработки ввода ---
 
@@ -229,6 +236,7 @@ def handle_keys(snake: Snake):
             elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 snake.next_direction = RIGHT
 
+
 # --- Основной игровой цикл ---
 
 def main():
@@ -245,7 +253,8 @@ def main():
 
     # Создание экземпляров игровых объектов
     snake = Snake()
-    apple = Apple(snake) # Передаем змейку для проверки коллизий яблока
+    # Передаем змейку для проверки коллизий яблока
+    apple = Apple(snake) 
 
     # Отрисовка начального состояния
     screen.fill(BLACK)
@@ -282,7 +291,7 @@ def main():
             apple.randomize_position()
 
         # 6. Отрисовка объектов
-        # Яблоко (оно может быть перерисовано змейкой, если позиция совпала)
+        # Яблоко (оно может быть перерисовано змейкой)
         apple.draw(screen)
         # Змейка (включает затирание следа)
         snake.draw(screen)

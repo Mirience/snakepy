@@ -37,10 +37,20 @@ class GameObject:
         self.position = position
         self.body_color = body_color
 
+    @staticmethod
+    def draw_square(surface: pygame.Surface, position: Tuple[int, int], color: Tuple[int, int]):
+        """
+        Вспомогательный статический метод для рисования одного квадрата.
+        Используется классами Apple и Snake для отрисовки своих сегментов.
+        """
+        rect = pygame.Rect(position, (GRID_SIZE, GRID_SIZE))
+        pygame.draw.rect(surface, color, rect)
+
     def draw(self, surface: pygame.Surface):
         """
         Абстрактный метод для отрисовки объекта на экране.
         Должен быть переопределен в дочерних классах.
+        В базовом классе не должно быть рисующих действий.
         """
         pass
 
@@ -53,9 +63,6 @@ class Apple(GameObject):
     def __init__(self, snake: 'Snake'):
         """
         Инициализирует яблоко, устанавливая цвет и случайную позицию.
-        При инициализации требует объект змейки для проверки коллизий.
-        :param snake: Экземпляр класса Snake для проверки, что яблоко 
-                      не появится на теле змейки.
         """
         # Яблоко всегда красное
         super().__init__((0, 0), RED)
@@ -65,7 +72,6 @@ class Apple(GameObject):
     def randomize_position(self):
         """
         Устанавливает случайное положение яблока на игровом поле.
-        Позиция выбирается в координатах сетки (пикселях), кратных GRID_SIZE.
         Гарантирует, что яблоко не появится на теле змейки.
         """
         while True:
@@ -81,11 +87,10 @@ class Apple(GameObject):
 
     def draw(self, surface: pygame.Surface):
         """
-        Отрисовывает яблоко как красный квадрат.
+        Отрисовывает яблоко как красный квадрат, используя базовый метод.
         :param surface: Игровая поверхность (окно Pygame).
         """
-        rect = pygame.Rect(self.position, (GRID_SIZE, GRID_SIZE))
-        pygame.draw.rect(surface, self.body_color, rect)
+        GameObject.draw_square(surface, self.position, self.body_color)
 
 # --- Класс Snake ---
 
@@ -97,22 +102,26 @@ class Snake(GameObject):
         """
         Инициализирует начальное состояние змейки.
         """
-        # Центральная точка экрана
+        # Вызов super() с нулевыми координатами, так как позиция будет 
+        # установлена в _initial_state
+        super().__init__((0, 0), GREEN)
+        self._initial_state()
+
+    def _initial_state(self):
+        """
+        Устанавливает змейку в начальное состояние (центр, длина 1, 
+        случайное направление). Устраняет дублирование кода между __init__ и reset.
+        """
         center_x = (GRID_WIDTH // 2) * GRID_SIZE
         center_y = (GRID_HEIGHT // 2) * GRID_SIZE
         
-        # Змейка всегда зеленая
-        super().__init__((center_x, center_y), GREEN)
-        
-        self.length: int = 1
-        # Список позиций сегментов змейки
-        self.positions: List[Tuple[int, int]] = [self.position] 
-        # Начальное направление движения - вправо
-        self.direction: Tuple[int, int] = RIGHT
-        # Следующее направление, устанавливается после нажатия клавиши
+        self.length = 1
+        self.positions: List[Tuple[int, int]] = [(center_x, center_y)]
+        # Выбор случайного направления
+        self.direction: Tuple[int, int] = random.choice([UP, DOWN, LEFT, RIGHT])
         self.next_direction: Optional[Tuple[int, int]] = None
-        # Позиция удаленного хвоста для затирания следа
         self.last_tail_position: Optional[Tuple[int, int]] = None
+        self.position = (center_x, center_y) # Обновление позиции базового класса
 
     def get_head_position(self) -> Tuple[int, int]:
         """
@@ -122,18 +131,10 @@ class Snake(GameObject):
 
     def reset(self):
         """
-        Сбрасывает змейку в начальное состояние после проигрыша.
-        Направление движения выбирается случайным образом.
+        Сбрасывает змейку в начальное состояние после проигрыша, вызывая 
+        общий метод установки начального состояния.
         """
-        center_x = (GRID_WIDTH // 2) * GRID_SIZE
-        center_y = (GRID_HEIGHT // 2) * GRID_SIZE
-        
-        self.length = 1
-        self.positions = [(center_x, center_y)]
-        # Выбор случайного направления при сбросе
-        self.direction = random.choice([UP, DOWN, LEFT, RIGHT])
-        self.next_direction = None
-        self.last_tail_position = None
+        self._initial_state()
 
     def update_direction(self):
         """
@@ -152,27 +153,15 @@ class Snake(GameObject):
 
     def move(self):
         """
-        Обновляет позицию змейки, добавляя новую голову и удаляя хвост 
-        (если змейка не съела яблоко).
-        Также обрабатывает прохождение сквозь стены (эффект "бублика").
+        Обновляет позицию змейки, используя оператор остатка от деления (%) 
+        для обработки прохождения сквозь стены (торус).
         """
         head_x, head_y = self.get_head_position()
         dir_x, dir_y = self.direction
 
-        # Вычисляем новую позицию головы (в координатах сетки)
-        new_head_x = head_x + dir_x * GRID_SIZE
-        new_head_y = head_y + dir_y * GRID_SIZE
-
-        # Обработка прохождения сквозь стены (торус)
-        if new_head_x < 0:
-            new_head_x = SCREEN_WIDTH - GRID_SIZE
-        elif new_head_x >= SCREEN_WIDTH:
-            new_head_x = 0
-        
-        if new_head_y < 0:
-            new_head_y = SCREEN_HEIGHT - GRID_SIZE
-        elif new_head_y >= SCREEN_HEIGHT:
-            new_head_y = 0
+        # [Оптимизация] Расчет нового положения головы одним действием с тороидальностью
+        new_head_x = (head_x + dir_x * GRID_SIZE) % SCREEN_WIDTH
+        new_head_y = (head_y + dir_y * GRID_SIZE) % SCREEN_HEIGHT
 
         # Новая позиция головы
         new_head_position = (new_head_x, new_head_y)
@@ -189,19 +178,18 @@ class Snake(GameObject):
             
     def draw(self, surface: pygame.Surface):
         """
-        Отрисовывает змейку и затирает ее след (хвост).
+        Отрисовывает все сегменты змейки и затирает ее след (хвост).
         :param surface: Игровая поверхность (окно Pygame).
         """
         # 1. Затираем след (предыдущую позицию хвоста)
         if self.last_tail_position:
-            tail_rect = pygame.Rect(self.last_tail_position, (GRID_SIZE, GRID_SIZE))
-            # Затираем черным цветом (цветом фона)
-            pygame.draw.rect(surface, BLACK, tail_rect)
+            GameObject.draw_square(surface, self.last_tail_position, BLACK)
 
         # 2. Отрисовываем все сегменты змейки
+        # Эта полная перерисовка необходима после screen.fill(BLACK) (например, после reset)
+        # для первоначальной отрисовки всего тела.
         for position in self.positions:
-            rect = pygame.Rect(position, (GRID_SIZE, GRID_SIZE))
-            pygame.draw.rect(surface, self.body_color, rect)
+            GameObject.draw_square(surface, position, self.body_color)
 
     def check_collision(self):
         """

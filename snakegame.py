@@ -171,7 +171,7 @@ class Snake(GameObject):
         head_x, head_y = self.get_head_position()
         dir_x, dir_y = self.direction
 
-        # Расчет нового положения головы одним действием с тороидальностью
+        # Расчет нового положения головы (тороидальность)
         new_head_x = (head_x + dir_x * GRID_SIZE) % SCREEN_WIDTH
         new_head_y = (head_y + dir_y * GRID_SIZE) % SCREEN_HEIGHT
 
@@ -206,12 +206,14 @@ class Snake(GameObject):
     def check_collision(self):
         """
         Проверяет столкновение головы змейки с ее телом.
+        
+        Проверяем, совпадает ли позиция головы с какой-либо позицией 
+        в остальной части тела (self.positions[1:]). Короткая змея 
+        (длина 1) не может укусить себя.
+        
         :return: True, если произошло столкновение, иначе False.
         """
         head = self.get_head_position()
-        # Проверяем, совпадает ли позиция головы с какой-либо позицией 
-        # в остальной части тела (self.positions[1:])
-        # Короткая змея (длина 1) не может укусить себя
         return self.length > 1 and head in self.positions[1:]
 
 

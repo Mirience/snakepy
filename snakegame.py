@@ -63,6 +63,7 @@ class Snake(GameObject):
         self.next_direction = None
 
 def handle_keys(snake):
+    """Обрабатывает нажатия клавиш для изменения направления движения змейки."""
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             quit()
